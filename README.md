@@ -24,3 +24,18 @@ Build with docker compose --env-file PATH -f compose.server.yaml build. After th
 Before an upgrade, back up PostgreSQL with pg_dump and test restoring the backup in an isolated database. Retain the preceding image tags and release configuration. Roll back the application by selecting the prior release tag if the schema is compatible. For an incompatible migration, restore the verified pre-upgrade backup during a maintenance window and account for writes made since the backup.
 
 This configuration has not been deployed to OCI. Complete the authentication flows, legal review, staging tests, and rollback drill before production cutover.
+
+### Production environment on a host with Nginx
+
+Copy .env.production.example to .env.production with restrictive permissions.
+Generate a unique database password and set DATABASE_URL to
+postgresql://gnk:PASSWORD@db:5432/gnk using the same password. Set the
+release tag, TLS directory and verified transactional sender credentials.
+The template publishes the stack on loopback ports 18080 and 18443 so the
+host Nginx can retain ports 80 and 443. The HTTP listener redirects to the
+public HTTPS origin on port 443, so use the HTTPS listener as the upstream
+with certificate verification enabled when configuring host Nginx at cutover.
+
+Validate with docker compose --env-file .env.production -f compose.server.yaml config --quiet.
+The production project name is gnk-production. Its network and database
+volume are scoped separately from the staging Compose project.
