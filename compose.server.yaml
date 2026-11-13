@@ -1,0 +1,82 @@
+name: gnk-${GNK_ENVIRONMENT:?Set GNK_ENVIRONMENT}
+services:
+  db:
+    image: postgres:17
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: gnk
+      POSTGRES_DB: gnk
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}
+    volumes:
+      - database:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "gnk", "-d", "gnk"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+  redis:
+    image: redis:7.4
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+  migrate:
+    image: gnk-api:${GNK_RELEASE:?Set GNK_RELEASE}
+    command: ["npm", "run", "migrate"]
+    environment:
+      DATABASE_URL: ${DATABASE_URL:?Set DATABASE_URL}
+    depends_on:
+      db:
+        condition: service_healthy
+  api:
+    image: gnk-api:${GNK_RELEASE:?Set GNK_RELEASE}
+    build:
+      context: .
+      target: api
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: ${DATABASE_URL:?Set DATABASE_URL}
+      REDIS_URL: redis://redis:6379
+      GNK_PUBLIC_ORIGIN: ${GNK_PUBLIC_ORIGIN:?Set GNK_PUBLIC_ORIGIN}
+      GNK_EMAIL_API_KEY: ${GNK_EMAIL_API_KEY:?Set GNK_EMAIL_API_KEY}
+      GNK_EMAIL_FROM: ${GNK_EMAIL_FROM:?Set GNK_EMAIL_FROM}
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:4000/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+  web:
+    image: gnk-web:${GNK_RELEASE:?Set GNK_RELEASE}
+    build:
+      context: .
+      target: web
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+  nginx:
+    image: nginx:stable-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./infrastructure/nginx/site.conf:/etc/nginx/conf.d/default.conf:ro
+      - ${GNK_TLS_DIRECTORY:?Set GNK_TLS_DIRECTORY}:/etc/nginx/tls:ro
+    depends_on:
+      web:
+        condition: service_healthy
+      api:
+        condition: service_healthy
+volumes:
+  database:

@@ -1,0 +1,1 @@
+{"name":"gnk-algo","private":true,"workspaces":["frontend","backend"],"scripts":{"dev:web":"npm run dev -w frontend","dev:api":"npm run dev -w backend","services":"docker compose up -d","build":"npm run build --workspaces","migrate":"npm run migrate -w backend"}}

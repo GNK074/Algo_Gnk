@@ -1,0 +1,44 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id              String           @id @default(uuid()) @db.Uuid
+  email           String           @unique @db.VarChar(254)
+  firstName       String           @db.VarChar(100)
+  lastName        String           @db.VarChar(100)
+  mobile          String           @db.VarChar(16)
+  passwordHash    String
+  emailVerifiedAt DateTime?
+  disabledAt      DateTime?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  acceptances     TermsAcceptance[]
+  accountTokens   AccountToken[]
+}
+
+model TermsAcceptance {
+  id             String   @id @default(uuid()) @db.Uuid
+  userId         String   @db.Uuid
+  termsVersion   String   @db.VarChar(64)
+  privacyVersion String   @db.VarChar(64)
+  acceptedAt     DateTime @default(now())
+  user           User     @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@unique([userId, termsVersion, privacyVersion])
+}
+
+model AccountToken {
+  digest    String   @id @db.Char(64)
+  userId    String   @db.Uuid
+  purpose   String   @db.VarChar(16)
+  expiresAt DateTime
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, purpose])
+}
