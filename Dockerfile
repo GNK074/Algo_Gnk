@@ -7,6 +7,8 @@ COPY backend/package.json backend/
 RUN npm ci
 COPY frontend frontend
 COPY backend backend
+ARG GNK_API_ORIGIN
+ENV GNK_API_ORIGIN=
 RUN npm exec -w backend -- prisma generate && npm run build
 
 FROM build AS web
