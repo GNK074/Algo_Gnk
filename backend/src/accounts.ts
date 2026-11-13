@@ -1,3 +1,4 @@
+import nodemailer from 'nodemailer';
 import { BadRequestException, Body, ConflictException, Controller, Post, ServiceUnavailableException, UnauthorizedException } from '@nestjs/common';
 import { Prisma, PrismaClient } from '@prisma/client';
 import { createHash, randomBytes, scrypt, timingSafeEqual } from 'node:crypto';
@@ -78,8 +79,8 @@ export class AccountController {
   }
 
   private async issue(userId: string, email: string, purpose: TokenPurpose) {
-    const { GNK_EMAIL_API_KEY: key, GNK_EMAIL_FROM: from, GNK_PUBLIC_ORIGIN: origin } = process.env;
-    if (!key || !from || !origin) return;
+    const { GNK_SMTP_USERNAME: user, GNK_SMTP_PASSWORD: password, GNK_EMAIL_FROM: from, GNK_PUBLIC_ORIGIN: origin } = process.env;
+    if (!user || !password || !from || !origin) return;
     const token = randomBytes(32).toString('hex');
     const lifetime = (purpose === 'verify' ? 30 : 15) * 60_000;
     const url = new URL(purpose === 'verify' ? '/verify-email' : '/reset-password', origin);
@@ -95,13 +96,17 @@ export class AccountController {
     if (rows !== 1) return;
     const subject = purpose === 'verify' ? 'Verify your GNK Algo email' : 'Reset your GNK Algo password';
     try {
-      const response = await fetch('https://api.resend.com/emails', {
-        method: 'POST',
-        headers: { Authorization: 'Bearer ' + key, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ from, to: [email], subject, text: subject + ': ' + url.href }),
-        signal: AbortSignal.timeout(5000),
+      const transport = nodemailer.createTransport({
+        host: 'smtp.gmail.com',
+        port: 587,
+        secure: false,
+        requireTLS: true,
+        auth: { user, pass: password.replace(/\s/g, '') },
+        connectionTimeout: 5000,
+        greetingTimeout: 5000,
+        socketTimeout: 10000,
       });
-      if (!response.ok) throw new Error('Email provider rejected request');
+      await transport.sendMail({ from, to: email, subject, text: subject + ': ' + url.href });
     } catch {
       await database.accountToken.deleteMany({ where: { digest: digest(token) } });
       console.error('GNK Algo account email delivery failed.');
