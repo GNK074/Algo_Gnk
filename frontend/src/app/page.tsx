@@ -3,7 +3,6 @@ import Disclaimer from '../components/disclaimer';
 
 export default function Home() {
   return <>
-    <header><Link href="/">GNK Algo</Link><nav><a href="#about">About</a><Link href="/login">Log in</Link><Link className="button" href="/register">Create account</Link></nav></header>
     <main>
       <section className="hero"><h1>Welcome to GNK Algo</h1><p>Manage your account and its security in one place.</p><Link className="button" href="/register">Create account</Link></section>
       <section id="about" className="cards">
