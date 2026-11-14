@@ -53,7 +53,8 @@ export default function AccountView({ profile = false }: { profile?: boolean }) 
       <nav aria-label="Account">
         <Link href="/dashboard" aria-current={!profile ? 'page' : undefined}>Dashboard</Link>
         <Link href="/profile" aria-current={profile ? 'page' : undefined}>Profile</Link>
-        <Link href="/sessions">Sessions</Link>
+        <Link href="/user/sessions">Sessions</Link>
+        <Link href="/user/activity">Account activity</Link>
         <Link href="/agreements">Agreements</Link>
         <Link href="/legal/security">Security awareness</Link>
         <button type="button" className="secondary" onClick={logout}>Sign out</button>

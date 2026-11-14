@@ -163,6 +163,7 @@ export class AccountController {
       });
       if (result.count !== 1) throw new BadRequestException('Invalid or expired link.');
       if (purpose === 'reset') {
+        await tx.accountActivity.create({ data: { userId: record.userId, event: 'PASSWORD_RESET' } });
         await tx.session.deleteMany({ where: { userId: record.userId } });
         await tx.loginChallenge.deleteMany({ where: { userId: record.userId } });
         return null;
@@ -254,6 +255,7 @@ export class AccountController {
           await tx.authenticator.update({ where: { userId }, data: { lastCounter: counter } });
         } else {
           await tx.authenticator.create({ data: { userId, secret: encrypted, lastCounter: counter } });
+          await tx.accountActivity.create({ data: { userId, event: 'MFA_ENROLLED' } });
           recovery = Array.from({ length: 10 }, () => randomBytes(16).toString('hex'));
           await tx.recoveryCode.createMany({ data: recovery.map(value => ({ userId, digest: digest(value) })) });
         }
@@ -264,6 +266,7 @@ export class AccountController {
       }
       await tx.loginChallenge.delete({ where: { digest: key } });
       await tx.session.create({ data: { userId, digest: digest(token), expiresAt } });
+      await tx.accountActivity.create({ data: { userId, event: 'SIGNED_IN' } });
       return { recovery };
     });
     if (!result) throw new UnauthorizedException('Incorrect code or expired challenge. Please sign in again if needed.');
@@ -314,6 +317,18 @@ export class AccountController {
     return active;
   }
 
+  @Get('activity')
+  @Header('Cache-Control', 'no-store')
+  async activity(@Headers('cookie') cookie?: string) {
+    const { user } = await this.requireSession(cookie);
+    return database.accountActivity.findMany({
+      where: { userId: user.id },
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+      take: 50,
+      select: { id: true, event: true, createdAt: true },
+    });
+  }
+
   @Get('sessions')
   @Header('Cache-Control', 'no-store')
   async sessions(@Headers('cookie') cookie?: string) {
@@ -333,14 +348,28 @@ export class AccountController {
     if (!/^[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}$/i.test(id) || id === active.id) {
       throw new BadRequestException('Choose another session or sign out of this session.');
     }
-    await database.session.deleteMany({ where: { id, userId: active.user.id } });
+    await database.$transaction(async tx => {
+      const userId = active.user.id;
+      const deleted = await tx.session.deleteMany({ where: { id, userId } });
+      if (deleted.count) await tx.accountActivity.create({ data: { userId, event: 'SESSION_REVOKED' } });
+    });
     return { status: 'revoked' };
   }
 
   @Post('logout')
   async logout(@Headers('cookie') cookie: string | undefined, @Res({ passthrough: true }) res: CookieResponse) {
     const token = readSession(cookie);
-    if (token) await database.session.deleteMany({ where: { digest: digest(token) } });
+    if (token) {
+      await database.$transaction(async tx => {
+        const where = { digest: digest(token) };
+        const session = await tx.session.findUnique({ where, select: { userId: true } });
+        if (!session) return;
+        const deleted = await tx.session.deleteMany({ where });
+        if (deleted.count) {
+          await tx.accountActivity.create({ data: { userId: session.userId, event: 'SIGNED_OUT' } });
+        }
+      });
+    }
     res.setHeader('Set-Cookie', sessionCookie('', 0));
     return { status: 'signed_out' };
   }
