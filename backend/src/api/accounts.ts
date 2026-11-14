@@ -5,7 +5,7 @@ import { Prisma, PrismaClient } from '@prisma/client';
 import { createHash, randomBytes, scrypt, timingSafeEqual } from 'node:crypto';
 import { promisify } from 'node:util';
 
-const database = new PrismaClient();
+export const database = new PrismaClient();
 const derive = promisify(scrypt);
 const consentVersion = 'draft-2026-11-13';
 const dummySalt = randomBytes(16).toString('hex');
@@ -28,7 +28,7 @@ const disclosure = {
   ],
 };
 
-async function sendAccountMail(to: string, subject: string, text: string) {
+export async function sendAccountMail(to: string, subject: string, text: string, pdf?: Uint8Array) {
   const { GNK_SMTP_USERNAME: user, GNK_SMTP_PASSWORD: password, GNK_EMAIL_FROM: from } = process.env;
   if (!user || !password || !from) throw new Error('SMTP unavailable');
   const transport = nodemailer.createTransport({
@@ -36,7 +36,7 @@ async function sendAccountMail(to: string, subject: string, text: string) {
     auth: { user, pass: password.replace(/\s/g, '') },
     connectionTimeout: 5000, greetingTimeout: 5000, socketTimeout: 10000,
   });
-  await transport.sendMail({ from, to, subject, text });
+  await transport.sendMail({ from, to, subject, text, attachments: pdf ? [{ filename: 'accepted-agreement.pdf', content: Buffer.from(pdf) }] : undefined });
 }
 
 type TokenPurpose = 'verify' | 'reset';
@@ -304,7 +304,7 @@ export class AccountController {
     return active.user;
   }
 
-  private async requireSession(cookie?: string) {
+  async requireSession(cookie?: string) {
     const token = readSession(cookie);
     const active = token && await database.session.findFirst({
       where: { digest: digest(token), expiresAt: { gt: new Date() }, user: { disabledAt: null } },

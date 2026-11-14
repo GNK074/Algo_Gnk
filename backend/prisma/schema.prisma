@@ -25,6 +25,7 @@ model User {
   sessions        Session[]
   recoveryCodes   RecoveryCode[]
   riskAcceptances RiskAcceptance[]
+  agreements      AgreementAcceptance[]
 }
 
 model TermsAcceptance {
@@ -95,4 +96,45 @@ model RiskAcceptance {
   user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@id([userId, version])
+}
+
+model AgreementVersion {
+  id          String   @id @default(uuid()) @db.Uuid
+  slug        String   @db.VarChar(80)
+  version     Int
+  title       String   @db.VarChar(200)
+  format      String   @db.VarChar(8)
+  source      Bytes
+  sha256      String   @db.Char(64)
+  createdAt   DateTime @default(now())
+  publishedAt DateTime?
+  archivedAt  DateTime?
+  acceptances AgreementAcceptance[]
+
+  @@unique([slug, version])
+}
+
+model AgreementAcceptance {
+  id          String   @id @default(uuid()) @db.Uuid
+  userId      String   @db.Uuid
+  versionId   String   @db.Uuid
+  acceptedAt  DateTime @default(now())
+  document    Bytes
+  sha256      String   @db.Char(64)
+  user        User             @relation(fields: [userId], references: [id], onDelete: Restrict)
+  version     AgreementVersion @relation(fields: [versionId], references: [id], onDelete: Restrict)
+  deliveries  AgreementDelivery[]
+
+  @@unique([userId, versionId])
+  @@index([versionId, acceptedAt])
+}
+
+model AgreementDelivery {
+  id           String   @id @default(uuid()) @db.Uuid
+  acceptanceId String   @db.Uuid
+  attemptedAt  DateTime @default(now())
+  sentAt       DateTime?
+  acceptance   AgreementAcceptance @relation(fields: [acceptanceId], references: [id], onDelete: Restrict)
+
+  @@index([acceptanceId, attemptedAt])
 }
