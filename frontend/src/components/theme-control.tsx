@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 
-const choices = ['system', 'light', 'dark'] as const;
+const choices = ['system', 'light', 'carbon', 'royal'] as const;
 type Theme = typeof choices[number];
 
 export default function ThemeControl() {
@@ -10,7 +10,7 @@ export default function ThemeControl() {
 
   useEffect(() => {
     const saved = document.documentElement.dataset.theme;
-    if (saved === 'light' || saved === 'dark') setTheme(saved);
+    if (saved === 'light' || saved === 'carbon' || saved === 'royal') setTheme(saved);
   }, []);
 
   function change(value: Theme) {
@@ -24,7 +24,7 @@ export default function ThemeControl() {
     <select value={theme} onChange={event => change(event.target.value as Theme)}>
       <option value="system">System</option>
       <option value="light">Light</option>
-      <option value="dark">Dark</option>
+      <option value="carbon">Carbon Black</option><option value="royal">Royal Blue</option>
     </select>
   </label>;
 }

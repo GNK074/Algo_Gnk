@@ -14,7 +14,9 @@ export default function RiskDisclosure() {
     fetch('/api/auth/risk-disclosure', { cache: 'no-store' }).then(async response => {
       if (response.status === 401) { window.location.replace('/login'); return; }
       if (!response.ok) throw new Error();
-      setDisclosure(await response.json());
+      const current = await response.json();
+      if (current.accepted) { window.location.replace('/dashboard'); return; }
+      setDisclosure(current);
       setMessage('');
     }).catch(() => setMessage('The disclosure is temporarily unavailable.'));
   }, []);

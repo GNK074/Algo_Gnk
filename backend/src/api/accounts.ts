@@ -274,8 +274,11 @@ export class AccountController {
   @Get('risk-disclosure')
   @Header('Cache-Control', 'no-store')
   async riskDisclosure(@Headers('cookie') cookie?: string) {
-    await this.requireSession(cookie);
-    return disclosure;
+    const session = await this.requireSession(cookie);
+    const accepted = await database.riskAcceptance.findUnique({
+      where: { userId_version: { userId: session.user.id, version: disclosure.version } },
+    });
+    return { ...disclosure, accepted: Boolean(accepted) };
   }
 
   @Post('risk-disclosure')

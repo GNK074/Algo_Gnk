@@ -20,6 +20,12 @@ export default function AccountForm({ register = false }: { register?: boolean }
     if (recovery.length && success.current && !success.current.open) success.current.showModal();
   }, [recovery]);
 
+  useEffect(() => {
+    if (!signedIn || recovery.length) return;
+    const timer = window.setTimeout(() => window.location.replace('/risk-disclosure'), 1500);
+    return () => window.clearTimeout(timer);
+  }, [signedIn, recovery]);
+
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const data = new FormData(event.currentTarget);
@@ -74,19 +80,9 @@ export default function AccountForm({ register = false }: { register?: boolean }
   </section>;
 
   if (signedIn) return <section>
-    <h2>Signed in</h2>
+    <h2 role="status">Login Successful!</h2>
     {recovery.length > 0 && <dialog className="panel" ref={success} aria-labelledby="mfa-success" onClose={() => setRecovery([])}><h2 id="mfa-success">Multi-factor authentication enabled</h2><p>Save these one-time recovery codes securely.</p>
-      <ul>{recovery.map(code => <li key={code}><code>{code}</code></li>)}</ul><form method="dialog"><button>Done</button></form></dialog>}<p><Link href="/dashboard">Open dashboard</Link></p>
-    <button type="button" onClick={async () => {
-      try {
-        const response = await fetch('/api/auth/logout', { method: 'POST' });
-        if (!response.ok) throw new Error();
-        setSignedIn(false);
-        setRecovery([]);
-      } catch {
-        setMessage('Sign-out failed. Please try again.');
-      }
-    }}>Sign out</button>
+      <ul>{recovery.map(code => <li key={code}><code>{code}</code></li>)}</ul><form method="dialog"><button>Done</button></form></dialog>}
     <p role="status">{message}</p>
   </section>;
 
