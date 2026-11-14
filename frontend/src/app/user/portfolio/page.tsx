@@ -11,19 +11,21 @@ type Portfolio = {
   oldestSnapshotAt?: string | null;
 };
 
-const messages: Partial<Record<Portfolio['status'], string>> = {
-  unavailable: 'Portfolio connectivity is unavailable.',
-  unlinked: 'Your trading account has not been linked.',
-  empty: 'No broker snapshots are available.',
+const messages: Record<Portfolio['status'], string> = {
+  unavailable: 'No portfolio data source is configured.',
+  unlinked: 'Your account has no linked trading profile.',
+  empty: 'Your first broker snapshot will appear here when available.',
   incomplete: 'Some broker snapshots are missing or stale.',
+  ready: 'Showing the latest available broker snapshots.',
 };
 
 const inr = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' });
-const money = (value?: string | null) => value == null ? 'Unavailable' : inr.format(Number(value));
+const money = (value?: string | null) => value == null ? '—' : inr.format(Number(value));
 
 export default function PortfolioPage() {
   const [portfolio, setPortfolio] = useState<Portfolio>();
   const [error, setError] = useState('');
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -40,20 +42,49 @@ export default function PortfolioPage() {
     }
     void load();
     return () => controller.abort();
-  }, []);
+  }, [attempt]);
 
-  return <main className="panel">
-    <Link href="/dashboard">Dashboard</Link>
-    <h1>Portfolio</h1>
-    {error ? <p role="alert">{error}</p> : !portfolio ? <p role="status">Loading portfolio…</p> : <>
-      {messages[portfolio.status] && <p role="status">{messages[portfolio.status]}</p>}
-      {(portfolio.status === 'ready' || portfolio.status === 'incomplete') && <dl className="account-details">
-        <div><dt>Holdings value</dt><dd>{money(portfolio.holdingsValue)}</dd></div>
-        <div><dt>Realized position P&amp;L</dt><dd>{money(portfolio.realizedPnl)}</dd></div>
-        <div><dt>Unrealized position P&amp;L</dt><dd>{money(portfolio.unrealizedPnl)}</dd></div>
-        <div><dt>Oldest available broker snapshot</dt><dd>{portfolio.oldestSnapshotAt ?
-          <time dateTime={portfolio.oldestSnapshotAt}>{new Date(portfolio.oldestSnapshotAt).toLocaleString()}</time> : 'Unavailable'}</dd></div>
-      </dl>}
-    </>}
+  function retry() {
+    setError('');
+    setPortfolio(undefined);
+    setAttempt(previous => previous + 1);
+  }
+
+  const loading = !portfolio && !error;
+
+  return <main className="account-workspace">
+    <aside className="account-sidebar">
+      <nav aria-label="Account">
+        <Link href="/dashboard">Dashboard</Link>
+        <Link href="/user/portfolio" aria-current="page">Portfolio</Link>
+        <Link href="/user/profile">Profile</Link>
+        <Link href="/user/sessions">Sessions</Link>
+        <Link href="/user/activity">Account activity</Link>
+      </nav>
+    </aside>
+    <section className="account-content portfolio-view" aria-labelledby="portfolio-heading">
+      <div className="portfolio-heading">
+        <div>
+          <h1 id="portfolio-heading">Portfolio</h1>
+          <p>Holdings and position P&amp;L</p>
+        </div>
+        <button type="button" className="secondary" onClick={retry} disabled={loading}>Refresh</button>
+      </div>
+
+      <dl className="account-details portfolio-metrics" aria-busy={loading}>
+        <div><dt>Holdings value</dt><dd>{money(portfolio?.holdingsValue)}</dd></div>
+        <div><dt>Realized position P&amp;L</dt><dd>{money(portfolio?.realizedPnl)}</dd></div>
+        <div><dt>Unrealized position P&amp;L</dt><dd>{money(portfolio?.unrealizedPnl)}</dd></div>
+      </dl>
+
+      <section className="portfolio-status" aria-labelledby="portfolio-data">
+        <h2 id="portfolio-data">Broker snapshots</h2>
+        {error ? <p role="alert">{error} Use Refresh to try again.</p>
+          : <p role="status">{portfolio ? messages[portfolio.status] : 'Loading portfolio…'}</p>}
+        {portfolio?.oldestSnapshotAt && <p>Oldest available snapshot{' '}
+          <time dateTime={portfolio.oldestSnapshotAt}>{new Date(portfolio.oldestSnapshotAt).toLocaleString()}</time>
+        </p>}
+      </section>
+    </section>
   </main>;
 }

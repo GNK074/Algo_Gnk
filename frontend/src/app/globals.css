@@ -96,3 +96,12 @@ header, footer { background-color: var(--surface, #141d34); border-color: var(--
   .account-workspace:has(.account-sidebar) { grid-template-columns: minmax(0, 1fr); }
   .account-sidebar nav { display: flex; justify-content: flex-start; }
 }
+
+.portfolio-heading { display: flex; flex-wrap: wrap; align-items: start; justify-content: space-between; gap: 1rem; }
+.portfolio-heading h1 { margin-bottom: .35rem; }
+.portfolio-heading p { margin: 0; }
+.portfolio-metrics { grid-template-columns: repeat(auto-fit, minmax(min(100%, 11rem), 1fr)); margin-block: 1.5rem; }
+.portfolio-metrics > div { background: var(--base); }
+.portfolio-metrics dd { font-size: clamp(1.35rem, 3vw, 2rem); font-weight: 700; font-variant-numeric: tabular-nums; }
+.portfolio-status { border-top: 1px solid var(--border); padding-top: 1rem; }
+.portfolio-status h2 { font-size: 1.1rem; margin: 0; }
