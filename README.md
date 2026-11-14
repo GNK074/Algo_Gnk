@@ -48,3 +48,21 @@ Gmail Send mail as address. Keep the app password in the server environment file
 See [Project layout](docs/project-layout.md) for source and deployment paths.
 
 Set GNK_MFA_KEY to a persistent 32-byte hex key generated with openssl rand -hex 32. Use distinct keys per environment and retain each key with its encrypted backups.
+
+## Live OCI routing
+
+Public HTTPS uses host Nginx on port 443. The gnkalgo.com virtual host
+proxies to https://127.0.0.1:18443, the loopback-only Compose HTTPS listener.
+The upstream uses TLS SNI and certificate hostname verification for gnkalgo.com
+with the Ubuntu system CA bundle. Keep the production HTTPS bind set to
+127.0.0.1:18443 unless the host upstream is updated in the same change.
+
+On OCI, verify the container and public route:
+
+```bash
+curl --noproxy '*' -fsS --connect-to gnkalgo.com:443:127.0.0.1:18443 https://gnkalgo.com/api/health
+curl -fsS https://gnkalgo.com/api/health
+```
+
+Both should return {"status":"ok"}. The host Nginx virtual host is managed
+on OCI. Keep certificate private keys and environment files on the server.
