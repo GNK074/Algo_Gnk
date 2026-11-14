@@ -18,8 +18,8 @@ test "$(git rev-parse HEAD)" = RELEASE_SHA
 grep -qx GNK_ENVIRONMENT=production .env.production
 grep -q '^GNK_RELEASE=' .env.production
 release=$(git rev-parse --short HEAD)
-GNK_RELEASE="$release" bash deploy/gnk-service.sh production build
-GNK_RELEASE="$release" bash deploy/gnk-service.sh production start
+GNK_RELEASE="$release" bash deploy/gnk-service.sh production build </dev/null
+GNK_RELEASE="$release" bash deploy/gnk-service.sh production start </dev/null
 test "$(docker inspect -f '{{.Config.Image}}' gnk-production-api-1)" = "gnk-api:$release"
 test "$(docker inspect -f '{{.Config.Image}}' gnk-production-web-1)" = "gnk-web:$release"
 curl -fsS --retry 5 --max-time 10 https://gnkalgo.com/api/health
