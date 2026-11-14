@@ -198,7 +198,7 @@ export class AccountController {
   @Header('Cache-Control', 'no-store')
   async mfa(@Body() body: Payload, @Res({ passthrough: true }) res: CookieResponse) {
     const challenge = field(body, 'challenge');
-    const code = field(body, 'code').trim();
+    const code = field(body, 'code').trim().toLowerCase();
     if (!/^[a-f0-9]{64}$/.test(challenge)) throw new UnauthorizedException('Invalid challenge.');
     const token = randomBytes(32).toString('hex');
     const expiresAt = new Date(Date.now() + sessionAge * 1000);
@@ -247,7 +247,7 @@ export class AccountController {
     const token = readSession(cookie);
     const active = token && await database.session.findFirst({
       where: { digest: digest(token), expiresAt: { gt: new Date() }, user: { disabledAt: null } },
-      select: { user: { select: { firstName: true, email: true } } },
+      select: { user: { select: { id: true, firstName: true, lastName: true, email: true, mobile: true, createdAt: true, emailVerifiedAt: true } } },
     });
     if (!active) throw new UnauthorizedException('Sign in required.');
     return active.user;

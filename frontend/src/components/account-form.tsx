@@ -1,6 +1,8 @@
 'use client';
 
-import { useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
+import Link from 'next/link';
+import QRCode from 'qrcode';
 
 export default function AccountForm({ register = false }: { register?: boolean }) {
   const [message, setMessage] = useState('');
@@ -9,6 +11,13 @@ export default function AccountForm({ register = false }: { register?: boolean }
   const [mfa, setMfa] = useState<{ challenge: string; secret: string | null }>();
   const [recovery, setRecovery] = useState<string[]>([]);
   const [signedIn, setSignedIn] = useState(false);
+  const [qr, setQr] = useState('');
+  const [useRecovery, setUseRecovery] = useState(false);
+  const success = useRef<HTMLDialogElement>(null);
+
+  useEffect(() => {
+    if (recovery.length && success.current && !success.current.open) success.current.showModal();
+  }, [recovery]);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -30,6 +39,14 @@ export default function AccountForm({ register = false }: { register?: boolean }
       const result = await response.json();
       if (response.ok && result.status === 'mfa_required') {
         setMfa({ challenge: result.challenge, secret: result.secret });
+        setUseRecovery(false);
+        setQr('');
+        if (result.secret) {
+          const label = encodeURIComponent('GNK Algo:' + String(data.get('email')).trim().toLowerCase());
+          const uri = 'otpauth://totp/' + label + '?issuer=GNK%20Algo&secret=' + encodeURIComponent(result.secret);
+          try { setQr(await QRCode.toDataURL(uri, { width: 240, margin: 4 })); }
+          catch { setMessage('QR code unavailable. Enter the setup key manually.'); }
+        }
       } else if (response.ok && result.status === 'signed_in') {
         setMfa(undefined);
         setRecovery(result.recovery);
@@ -46,8 +63,8 @@ export default function AccountForm({ register = false }: { register?: boolean }
 
   if (signedIn) return <section>
     <h2>Signed in</h2>
-    {recovery.length > 0 && <><p>Multi-factor authentication is enabled. Save these one-time recovery codes securely.</p>
-      <ul>{recovery.map(code => <li key={code}><code>{code}</code></li>)}</ul></>}
+    {recovery.length > 0 && <dialog className="panel" ref={success} aria-labelledby="mfa-success" onClose={() => setRecovery([])}><h2 id="mfa-success">Multi-factor authentication enabled</h2><p>Save these one-time recovery codes securely.</p>
+      <ul>{recovery.map(code => <li key={code}><code>{code}</code></li>)}</ul><form method="dialog"><button>Done</button></form></dialog>}<p><Link href="/dashboard">Open dashboard</Link></p>
     <button type="button" onClick={async () => {
       try {
         const response = await fetch('/api/auth/logout', { method: 'POST' });
@@ -62,11 +79,13 @@ export default function AccountForm({ register = false }: { register?: boolean }
   </section>;
 
   if (mfa) return <form onSubmit={submit}>
+    {qr && <img src={qr} width={240} height={240} alt="Scan this QR code with your authenticator app" />}
     {mfa.secret && <p>Add this key to your authenticator as a time-based account: <code>{mfa.secret}</code></p>}
-    <label>{mfa.secret ? 'Authenticator code' : 'Authenticator or recovery code'}
-      <input name="code" autoComplete="one-time-code" maxLength={32} required />
+    <label>{useRecovery ? 'Recovery code' : 'Six-digit authenticator code'}
+      <input name="code" autoComplete="one-time-code" key={String(useRecovery)} inputMode={useRecovery ? "text" : "numeric"} pattern={useRecovery ? "[a-fA-F0-9]{32}" : "[0-9]{6}"} maxLength={useRecovery ? 32 : 6} required />
     </label>
     <button disabled={busy}>Verify</button>
+    {!mfa.secret && <button disabled={busy} type="button" className="secondary" onClick={() => setUseRecovery(!useRecovery)}>{useRecovery ? "Use authenticator code" : "Use a recovery code"}</button>}
     <button type="button" className="secondary" onClick={() => { setMfa(undefined); setMessage(''); }}>Back to login</button>
     <p role="status">{message}</p>
   </form>;
