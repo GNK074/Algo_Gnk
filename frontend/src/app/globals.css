@@ -33,3 +33,14 @@ a { color: var(--link, #c4bcff); }
 article, .panel { background: var(--surface, #141d34); border-color: var(--border, #323b55); }
 input:not([type=checkbox]) { background: var(--base, #0a1022); }
 .secondary { background: var(--base, #273353); }
+
+dialog.risk-disclosure { width: min(38rem, calc(100% - 2rem)); }
+.risk-heading { text-align: center; margin-bottom: 1rem; }
+.risk-heading h2 { margin: .5rem 0; }
+.risk-icon { display: inline-grid; place-items: center; width: 3rem; height: 3rem; border-radius: 50%; color: #7c4200; background: #ffedce; font-size: 1.5rem; }
+.risk-content { border: 1px solid var(--border, #596582); border-radius: .85rem; padding: 1rem; max-height: 36dvh; overflow-y: auto; }
+.risk-content h3 { margin-top: 0; }
+.risk-content ul { padding-inline-start: 1.3rem; line-height: 1.55; }
+.risk-content li { margin-block: .35rem; }
+.risk-content li::marker { color: #cc7808; }
+.risk-disclosure form button:first-child { background: #08724c; color: white; }
