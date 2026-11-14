@@ -38,6 +38,8 @@ services:
     restart: unless-stopped
     environment:
       NODE_ENV: production
+      GNK_PORTFOLIO_ORIGIN: ${GNK_PORTFOLIO_ORIGIN:-}
+      GNK_PORTFOLIO_SECRET: ${GNK_PORTFOLIO_SECRET:-}
       GNK_PLATFORM_ADMIN_IDS: ${GNK_PLATFORM_ADMIN_IDS:-}
       GNK_AGREEMENT_ADMIN_ID: ${GNK_AGREEMENT_ADMIN_ID:-}
       GNK_MFA_KEY: ${GNK_MFA_KEY:?Set GNK_MFA_KEY}

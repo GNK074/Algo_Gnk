@@ -69,3 +69,11 @@ on OCI. Keep certificate private keys and environment files on the server.
 Set GNK_PLATFORM_ADMIN_IDS to a comma-separated list of existing account UUIDs in the API environment to grant access to /admin. An empty value disables platform admin access. The agreement administrator setting is independent.
 
 Before deploying this increment, apply the account activity migration on a staging copy. Check that anonymous admin requests receive 401, retail requests receive 403, and configured administrators can search users and read audit history. Exercise sign-in, sign-out, password reset and session revocation with two staging accounts and verify that each account activity feed only contains its own events. Roll back the application image first and retain the additive activity table so recorded events remain available. Rehearse database restoration separately using a staging backup.
+
+## Read-only portfolio
+
+The account workspace shows holdings value and position P&L through /user/portfolio. Set GNK_PORTFOLIO_ORIGIN to the trading API HTTPS origin and GNK_PORTFOLIO_SECRET to a dedicated 32-byte hex secret. The trading service needs the same secret and its companion portfolio bridge deployed.
+
+On the trading service, set GNK_PORTFOLIO_ACCOUNT_LINKS to a JSON object keyed by account-app user UUID with verified trading user IDs as values. Verify ownership before provisioning each link and remove the link when access ends. The bridge accepts a short-lived signed request and uses Redis to reject repeated nonces.
+
+Before enabling the link in production, exercise two linked test accounts and one unlinked account. Check session and disclosure enforcement, expired and repeated signed requests, and stale or missing broker snapshots.

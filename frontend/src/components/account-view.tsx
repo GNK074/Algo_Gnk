@@ -54,6 +54,7 @@ export default function AccountView({ profile = false }: { profile?: boolean }) 
         <Link href="/dashboard" aria-current={!profile ? 'page' : undefined}>Dashboard</Link>
         <Link href="/profile" aria-current={profile ? 'page' : undefined}>Profile</Link>
         <Link href="/user/sessions">Sessions</Link>
+        <Link href="/user/portfolio">Portfolio</Link>
         <Link href="/user/activity">Account activity</Link>
         <Link href="/agreements">Agreements</Link>
         <Link href="/legal/security">Security awareness</Link>
