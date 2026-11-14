@@ -44,3 +44,5 @@ Gmail SMTP uses smtp.gmail.com on port 587 with required STARTTLS.
 Set GNK_SMTP_USERNAME to the full Gmail address and GNK_SMTP_PASSWORD to a
 Google app password. Set GNK_EMAIL_FROM to the Gmail address or a verified
 Gmail Send mail as address. Keep the app password in the server environment file.
+
+See [Project layout](docs/project-layout.md) for source and deployment paths.

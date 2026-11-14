@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import Disclaimer from './disclaimer';
+import Disclaimer from '../components/disclaimer';
 
 export default function Home() {
   return <>

@@ -1,6 +1,6 @@
 import "./globals.css";
 import type { ReactNode } from 'react';
-import ThemeControl from './theme-control';
+import ThemeControl from '../components/theme-control';
 
 export const metadata = { title: 'GNK Algo', description: 'GNK Algo account management' };
 

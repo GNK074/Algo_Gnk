@@ -1,7 +1,7 @@
 import 'reflect-metadata';
 import { Controller, Get, Module } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
-import { AccountController } from './accounts';
+import { AccountController } from './api/accounts';
 
 @Controller('api')
 class HealthController {
