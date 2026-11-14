@@ -29,11 +29,11 @@ const disclosure = {
 };
 
 export async function sendAccountMail(to: string, subject: string, text: string, pdf?: Uint8Array) {
-  const { GNK_SMTP_USERNAME: user, GNK_SMTP_PASSWORD: password, GNK_EMAIL_FROM: from } = process.env;
-  if (!user || !password || !from) throw new Error('SMTP unavailable');
+  const { GNK_SMTP_PASSWORD: password, GNK_EMAIL_FROM: from } = process.env;
+  if (!password || !from) throw new Error('SMTP unavailable');
   const transport = nodemailer.createTransport({
-    host: 'smtp.gmail.com', port: 587, secure: false, requireTLS: true,
-    auth: { user, pass: password.replace(/\s/g, '') },
+    host: 'smtp.mx.cloudflare.net', port: 465, secure: true,
+    auth: { user: 'api_token', pass: password },
     connectionTimeout: 5000, greetingTimeout: 5000, socketTimeout: 10000,
   });
   await transport.sendMail({ from, to, subject, text, attachments: pdf ? [{ filename: 'accepted-agreement.pdf', content: Buffer.from(pdf) }] : undefined });
@@ -103,8 +103,8 @@ export class AccountController {
   }
 
   private async issue(userId: string, email: string, purpose: TokenPurpose) {
-    const { GNK_SMTP_USERNAME: user, GNK_SMTP_PASSWORD: password, GNK_EMAIL_FROM: from, GNK_PUBLIC_ORIGIN: origin } = process.env;
-    if (!user || !password || !from || !origin) return;
+    const { GNK_SMTP_PASSWORD: password, GNK_EMAIL_FROM: from, GNK_PUBLIC_ORIGIN: origin } = process.env;
+    if (!password || !from || !origin) return;
     const token = randomBytes(32).toString('hex');
     const lifetime = (purpose === 'verify' ? 30 : 15) * 60_000;
     const url = new URL(purpose === 'verify' ? '/verify-email' : '/reset-password', origin);

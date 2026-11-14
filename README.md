@@ -17,7 +17,7 @@ Set DATABASE_URL in the shell before running npm run migrate. For the local Comp
 
 ## Isolated OCI server configuration
 
-Use dedicated Ubuntu instances for staging and production. On each instance, place the TLS full chain and private key in a dedicated directory. Store each environment's Compose settings in a separate, access-restricted environment file. Set GNK_ENVIRONMENT, GNK_RELEASE, GNK_TLS_DIRECTORY, POSTGRES_PASSWORD, DATABASE_URL, GNK_PUBLIC_ORIGIN, GNK_SMTP_USERNAME, GNK_SMTP_PASSWORD and GNK_EMAIL_FROM. Use a unique release tag and set the database hostname to db. URL-encode the database password in DATABASE_URL.
+Use dedicated Ubuntu instances for staging and production. On each instance, place the TLS full chain and private key in a dedicated directory. Store each environment's Compose settings in a separate, access-restricted environment file. Set GNK_ENVIRONMENT, GNK_RELEASE, GNK_TLS_DIRECTORY, POSTGRES_PASSWORD, DATABASE_URL, GNK_PUBLIC_ORIGIN, GNK_SMTP_PASSWORD and GNK_EMAIL_FROM. Use a unique release tag and set the database hostname to db. URL-encode the database password in DATABASE_URL.
 
 Build with docker compose --env-file PATH -f compose.server.yaml build. After the application passes its release checks, run docker compose --env-file PATH -f compose.server.yaml up -d --wait on the dedicated staging instance. The migration runs before the API starts. Nginx serves the web app and forwards API requests on the same origin.
 
@@ -40,10 +40,7 @@ Validate with docker compose --env-file .env.production -f compose.server.yaml c
 The production project name is gnk-production. Its network and database
 volume are scoped separately from the staging Compose project.
 
-Gmail SMTP uses smtp.gmail.com on port 587 with required STARTTLS.
-Set GNK_SMTP_USERNAME to the full Gmail address and GNK_SMTP_PASSWORD to a
-Google app password. Set GNK_EMAIL_FROM to the Gmail address or a verified
-Gmail Send mail as address. Keep the app password in the server environment file.
+Cloudflare Email Sending uses smtp.mx.cloudflare.net on port 465 with implicit TLS. Onboard the sender domain in Cloudflare, set GNK_EMAIL_FROM to an address on that domain, and set GNK_SMTP_PASSWORD to an Email Sending: Edit token in the server environment file.
 
 See [Project layout](docs/project-layout.md) for source and deployment paths.
 
