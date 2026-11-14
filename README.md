@@ -63,3 +63,9 @@ curl -fsS https://gnkalgo.com/api/health
 
 Both should return {"status":"ok"}. The host Nginx virtual host is managed
 on OCI. Keep certificate private keys and environment files on the server.
+
+## Platform administration
+
+Set GNK_PLATFORM_ADMIN_IDS to a comma-separated list of existing account UUIDs in the API environment to grant access to /admin. An empty value disables platform admin access. The agreement administrator setting is independent.
+
+Before deploying this increment, apply the account activity migration on a staging copy. Check that anonymous admin requests receive 401, retail requests receive 403, and configured administrators can search users and read audit history. Exercise sign-in, sign-out, password reset and session revocation with two staging accounts and verify that each account activity feed only contains its own events. Roll back the application image first and retain the additive activity table so recorded events remain available. Rehearse database restoration separately using a staging backup.
