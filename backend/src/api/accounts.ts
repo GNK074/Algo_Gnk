@@ -308,10 +308,33 @@ export class AccountController {
     const token = readSession(cookie);
     const active = token && await database.session.findFirst({
       where: { digest: digest(token), expiresAt: { gt: new Date() }, user: { disabledAt: null } },
-      select: { user: { select: { id: true, firstName: true, lastName: true, email: true, mobile: true, createdAt: true, emailVerifiedAt: true } } },
+      select: { id: true, user: { select: { id: true, firstName: true, lastName: true, email: true, mobile: true, createdAt: true, emailVerifiedAt: true } } },
     });
     if (!active) throw new UnauthorizedException('Sign in required.');
     return active;
+  }
+
+  @Get('sessions')
+  @Header('Cache-Control', 'no-store')
+  async sessions(@Headers('cookie') cookie?: string) {
+    const active = await this.requireSession(cookie);
+    const sessions = await database.session.findMany({
+      where: { userId: active.user.id, expiresAt: { gt: new Date() } },
+      orderBy: { createdAt: 'desc' },
+      select: { id: true, createdAt: true, expiresAt: true },
+    });
+    return sessions.map(session => ({ ...session, current: session.id === active.id }));
+  }
+
+  @Post('sessions/revoke')
+  async revokeSession(@Body() body: Payload, @Headers('cookie') cookie?: string) {
+    const active = await this.requireSession(cookie);
+    const id = field(body, 'id');
+    if (!/^[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}$/i.test(id) || id === active.id) {
+      throw new BadRequestException('Choose another session or sign out of this session.');
+    }
+    await database.session.deleteMany({ where: { id, userId: active.user.id } });
+    return { status: 'revoked' };
   }
 
   @Post('logout')

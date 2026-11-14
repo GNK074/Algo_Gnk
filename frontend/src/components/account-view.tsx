@@ -48,7 +48,7 @@ export default function AccountView({ profile = false }: { profile?: boolean }) 
     <Link href="/">GNK Algo</Link>
     <h1>{profile ? 'Profile' : 'Dashboard'}</h1>
     {account ? <>
-      <nav aria-label="Account"><Link href="/dashboard">Dashboard</Link><Link href="/profile">Profile</Link><button onClick={logout}>Sign out</button></nav>
+      <nav aria-label="Account"><Link href="/dashboard">Dashboard</Link><Link href="/profile">Profile</Link><Link href="/sessions">Sessions</Link><button onClick={logout}>Sign out</button></nav>
       <h2>{profile ? account.firstName + ' ' + account.lastName : 'Welcome, ' + account.firstName}</h2>
       <dl>
         <dt>Email</dt><dd>{account.email}</dd>
