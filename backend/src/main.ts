@@ -2,6 +2,7 @@ import 'reflect-metadata';
 import { Controller, Get, Module } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { AgreementController } from './api/agreements';
+import { DashboardController } from './api/dashboard';
 import { PortfolioController } from './api/portfolio';
 import { AdminController } from './api/admin';
 import { AccountController } from './api/accounts';
@@ -14,7 +15,7 @@ class HealthController {
   }
 }
 
-@Module({ controllers: [HealthController, AccountController, AgreementController, AdminController, PortfolioController], providers: [AccountController] })
+@Module({ controllers: [HealthController, AccountController, AgreementController, AdminController, PortfolioController, DashboardController], providers: [AccountController, PortfolioController] })
 class AppModule {}
 
 async function main() {

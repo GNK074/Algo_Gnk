@@ -38,6 +38,7 @@ services:
     restart: unless-stopped
     environment:
       NODE_ENV: production
+      GNK_ANALYTICS_ORIGIN: ${GNK_ANALYTICS_ORIGIN:-}
       GNK_PORTFOLIO_ORIGIN: ${GNK_PORTFOLIO_ORIGIN:-}
       GNK_PORTFOLIO_SECRET: ${GNK_PORTFOLIO_SECRET:-}
       GNK_PLATFORM_ADMIN_IDS: ${GNK_PLATFORM_ADMIN_IDS:-}

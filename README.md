@@ -77,3 +77,14 @@ The account workspace shows holdings value and position P&L through /user/portfo
 On the trading service, set GNK_PORTFOLIO_ACCOUNT_LINKS to a JSON object keyed by account-app user UUID with verified trading user IDs as values. Verify ownership before provisioning each link and remove the link when access ends. The bridge accepts a short-lived signed request and uses Redis to reject repeated nonces.
 
 Before enabling the link in production, exercise two linked test accounts and one unlinked account. Check session and disclosure enforcement, expired and repeated signed requests, and stale or missing broker snapshots.
+
+## FastAPI analytics
+
+Start the Python service locally with `docker compose -f compose.analytics.yaml up --build --wait`.
+Liveness is available at http://127.0.0.1:58000/health. Readiness returns HTTP 503 until a market-data source is implemented and connected.
+The analytics Compose file is independent of the production account stack.
+
+For historical NIFTY 50 charts, provide GNK_CANDLES_FILE and GNK_CANDLES_SOURCE to analytics.
+The source file must be an authorized daily CSV with date,open,high,low,close headers and up to 1000 rows ordered oldest first.
+Mount the CSV read-only when running analytics in Docker. Set GNK_ANALYTICS_ORIGIN in the account API to the analytics service URL reachable from that container.
+The dashboard labels prices as historical and shows availability states when the source is missing.

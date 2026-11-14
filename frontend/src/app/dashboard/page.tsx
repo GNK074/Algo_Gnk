@@ -1,5 +1,5 @@
-import AccountView from '../../components/account-view';
+import TradingDashboard from '../../components/trading-dashboard';
 
 export default function Dashboard() {
-  return <AccountView />;
+  return <TradingDashboard />;
 }
