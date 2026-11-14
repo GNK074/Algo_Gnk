@@ -22,7 +22,7 @@ export default function AccountForm({ register = false }: { register?: boolean }
 
   useEffect(() => {
     if (!signedIn || recovery.length) return;
-    const timer = window.setTimeout(() => window.location.replace('/risk-disclosure'), 1500);
+    const timer = window.setTimeout(() => window.location.replace('/dashboard'), 1500);
     return () => window.clearTimeout(timer);
   }, [signedIn, recovery]);
 

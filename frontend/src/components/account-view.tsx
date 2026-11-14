@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import RiskDisclosure from './risk-disclosure';
 import { useEffect, useState } from 'react';
 
 type Account = {
@@ -14,6 +15,7 @@ type Account = {
 };
 
 export default function AccountView({ profile = false }: { profile?: boolean }) {
+  const [needsDisclosure, setNeedsDisclosure] = useState(false);
   const [account, setAccount] = useState<Account>();
   const [message, setMessage] = useState('Checking your session...');
   useEffect(() => {
@@ -21,7 +23,7 @@ export default function AccountView({ profile = false }: { profile?: boolean }) 
     async function load() {
       try {
         const response = await fetch('/api/auth/session', { cache: 'no-store', signal: controller.signal });
-        if (response.status === 403) { window.location.replace('/risk-disclosure'); return; }
+        if (response.status === 403) { setNeedsDisclosure(true); setMessage(''); return; }
         if (response.status === 401) { setMessage('Your session has ended. Please log in.'); return; }
         if (!response.ok) throw new Error();
         setAccount(await response.json());
@@ -43,6 +45,8 @@ export default function AccountView({ profile = false }: { profile?: boolean }) 
       setMessage('Sign-out failed. Try again.');
     }
   }
+
+  if (needsDisclosure) return <RiskDisclosure />;
 
   return <main className="panel">
     <Link href="/">GNK Algo</Link>

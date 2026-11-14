@@ -21,8 +21,6 @@ dialog.panel { color: inherit; margin: auto; max-height: calc(100dvh - 2rem); }
 dialog::backdrop { background: rgb(3 7 18 / 75%); }
 
 .theme-bar { display: flex; justify-content: flex-end; padding: .75rem clamp(1rem,5vw,5rem); }
-.theme-control { display: flex; align-items: center; }
-.theme-control select { color: inherit; background: var(--surface, #141d34); border: 1px solid #75809d; border-radius: .5rem; padding: .35rem; font: inherit; }
 :root[data-theme=light] { color-scheme: light; --surface: #fff; --base: #f3f5ff; --ink: #18213b; --link: #4936a3; --glow: #dbd4ff; --border: #aab2cc; }
 @media (prefers-color-scheme: light) {
   :root:not([data-theme=dark]) { color-scheme: light; --surface: #fff; --base: #f3f5ff; --ink: #18213b; --link: #4936a3; --glow: #dbd4ff; --border: #aab2cc; }
@@ -48,5 +46,19 @@ dialog.risk-disclosure { width: min(38rem, calc(100% - 2rem)); }
 .theme-bar { justify-content: space-between; align-items: center; }
 .gnk-brand { display: block; position: relative; overflow: hidden; width: 10rem; height: 1.6rem; border-radius: .25rem; }
 .gnk-brand img { position: absolute; width: 22rem; max-width: none; left: -5.9rem; top: -6.25rem; }
-:root[data-theme=carbon] { color-scheme: dark; --surface: #171717; --base: #080808; --ink: #f5f5f5; --link: #d0c6ff; --glow: #252525; --border: #555; }
-:root[data-theme=royal] { color-scheme: dark; --surface: #17295c; --base: #0b163d; --ink: #f3f6ff; --link: #c3d3ff; --glow: #284ab1; --border: #6078ac; }
+
+.theme-toggle { display: grid; place-items: center; width: 44px; height: 44px; padding: 0; color: inherit; background: var(--surface, #141d34); border: 1px solid var(--border, #75809d); }
+.theme-toggle:focus-visible { outline: 2px solid currentColor; outline-offset: 3px; }
+.theme-toggle svg { width: 21px; height: 21px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.theme-toggle .theme-moon, :root[data-theme=light] .theme-sun { display: none; }
+:root[data-theme=light] .theme-moon { display: block; }
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme]) .theme-moon { display: block; }
+  :root:not([data-theme]) .theme-sun { display: none; }
+}
+header, footer, .theme-bar { background-color: var(--surface, #141d34); border-color: var(--border, #323b55); }
+@media (prefers-reduced-motion: no-preference) {
+  :root, header, footer, .theme-bar, .panel, article, input, button, a { transition: background-color 240ms ease, color 240ms ease, border-color 240ms ease; }
+  .theme-toggle svg { animation: theme-icon-in 240ms ease; }
+}
+@keyframes theme-icon-in { from { opacity: .5; transform: rotate(-12deg); } }
