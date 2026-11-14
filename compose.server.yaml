@@ -38,6 +38,7 @@ services:
     restart: unless-stopped
     environment:
       NODE_ENV: production
+      GNK_MFA_KEY: ${GNK_MFA_KEY:?Set GNK_MFA_KEY}
       DATABASE_URL: ${DATABASE_URL:?Set DATABASE_URL}
       REDIS_URL: redis://redis:6379
       GNK_PUBLIC_ORIGIN: ${GNK_PUBLIC_ORIGIN:?Set GNK_PUBLIC_ORIGIN}

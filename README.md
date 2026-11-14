@@ -46,3 +46,5 @@ Google app password. Set GNK_EMAIL_FROM to the Gmail address or a verified
 Gmail Send mail as address. Keep the app password in the server environment file.
 
 See [Project layout](docs/project-layout.md) for source and deployment paths.
+
+Set GNK_MFA_KEY to a persistent 32-byte hex key generated with openssl rand -hex 32. Use distinct keys per environment and retain each key with its encrypted backups.

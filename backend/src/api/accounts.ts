@@ -1,5 +1,6 @@
+import { decryptSecret, encryptSecret, generateSecret, matchingCounter } from '../security/totp';
 import nodemailer from 'nodemailer';
-import { BadRequestException, Body, ConflictException, Controller, Post, ServiceUnavailableException, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, Body, ConflictException, Controller, Post, Get, Header, Headers, Res, UnauthorizedException } from '@nestjs/common';
 import { Prisma, PrismaClient } from '@prisma/client';
 import { createHash, randomBytes, scrypt, timingSafeEqual } from 'node:crypto';
 import { promisify } from 'node:util';
@@ -148,11 +149,16 @@ export class AccountController {
         data: purpose === 'verify' ? { emailVerifiedAt: new Date() } : { passwordHash },
       });
       if (result.count !== 1) throw new BadRequestException('Invalid or expired link.');
+      if (purpose === 'reset') {
+        await tx.session.deleteMany({ where: { userId: record.userId } });
+        await tx.loginChallenge.deleteMany({ where: { userId: record.userId } });
+      }
     });
     return { status: purpose === 'verify' ? 'verified' : 'password_updated' };
   }
 
   @Post('login')
+  @Header('Cache-Control', 'no-store')
   async login(@Body() body: Payload) {
     const email = field(body, 'email').trim().toLowerCase();
     const password = field(body, 'password');
@@ -166,6 +172,106 @@ export class AccountController {
       throw new UnauthorizedException('Invalid email or password.');
     }
     if (!account.emailVerifiedAt) return { status: 'verification_required' };
-    throw new ServiceUnavailableException('Authenticator verification is being configured.');
+    return database.$transaction(async tx => {
+      await tx.$queryRaw`SELECT id FROM "User" WHERE id = ${account.id}::uuid FOR UPDATE`;
+      const current = await tx.user.findUnique({
+        where: { id: account.id }, include: { authenticator: true },
+      });
+      if (!current || current.disabledAt || !current.emailVerifiedAt || current.passwordHash !== account.passwordHash) {
+        throw new UnauthorizedException('Invalid email or password.');
+      }
+      const challenge = randomBytes(32).toString('hex');
+      const secret = current.authenticator ? null : generateSecret();
+      await tx.loginChallenge.deleteMany({ where: { userId: account.id } });
+      await tx.loginChallenge.create({
+        data: {
+          digest: digest(challenge), userId: account.id,
+          pendingSecret: secret ? encryptSecret(secret, account.id) : null,
+          expiresAt: new Date(Date.now() + 300_000),
+        },
+      });
+      return { status: 'mfa_required', challenge, secret };
+    });
   }
+
+  @Post('mfa')
+  @Header('Cache-Control', 'no-store')
+  async mfa(@Body() body: Payload, @Res({ passthrough: true }) res: CookieResponse) {
+    const challenge = field(body, 'challenge');
+    const code = field(body, 'code').trim();
+    if (!/^[a-f0-9]{64}$/.test(challenge)) throw new UnauthorizedException('Invalid challenge.');
+    const token = randomBytes(32).toString('hex');
+    const expiresAt = new Date(Date.now() + sessionAge * 1000);
+    const result = await database.$transaction(async tx => {
+      const key = digest(challenge);
+      const initial = await tx.loginChallenge.findUnique({ where: { digest: key } });
+      if (!initial) return null;
+      const userId = initial.userId;
+      await tx.$queryRaw`SELECT id FROM "User" WHERE id = ${userId}::uuid FOR UPDATE`;
+      const record = await tx.loginChallenge.findUnique({
+        where: { digest: key }, include: { user: { include: { authenticator: true } } },
+      });
+      if (!record || record.attempts >= 5 || record.expiresAt <= new Date() || record.user.disabledAt ||
+          !record.user.emailVerifiedAt) return null;
+      await tx.loginChallenge.update({ where: { digest: key }, data: { attempts: { increment: 1 } } });
+      const authenticator = record.user.authenticator;
+      const encrypted = authenticator?.secret ?? record.pendingSecret;
+      if (!encrypted) return null;
+      const counter = matchingCounter(decryptSecret(encrypted, userId), code);
+      let recovery: string[] = [];
+      if (counter !== null && (!authenticator || counter > authenticator.lastCounter)) {
+        if (authenticator) {
+          await tx.authenticator.update({ where: { userId }, data: { lastCounter: counter } });
+        } else {
+          await tx.authenticator.create({ data: { userId, secret: encrypted, lastCounter: counter } });
+          recovery = Array.from({ length: 10 }, () => randomBytes(16).toString('hex'));
+          await tx.recoveryCode.createMany({ data: recovery.map(value => ({ userId, digest: digest(value) })) });
+        }
+      } else {
+        if (!authenticator || !/^[a-f0-9]{32}$/.test(code)) return null;
+        const used = await tx.recoveryCode.deleteMany({ where: { userId, digest: digest(code) } });
+        if (used.count !== 1) return null;
+      }
+      await tx.loginChallenge.delete({ where: { digest: key } });
+      await tx.session.create({ data: { userId, digest: digest(token), expiresAt } });
+      return { recovery };
+    });
+    if (!result) throw new UnauthorizedException('Incorrect code or expired challenge. Please sign in again if needed.');
+    res.setHeader('Set-Cookie', sessionCookie(token, sessionAge));
+    return { status: 'signed_in', recovery: result.recovery };
+  }
+
+  @Get('session')
+  @Header('Cache-Control', 'no-store')
+  async session(@Headers('cookie') cookie?: string) {
+    const token = readSession(cookie);
+    const active = token && await database.session.findFirst({
+      where: { digest: digest(token), expiresAt: { gt: new Date() }, user: { disabledAt: null } },
+      select: { user: { select: { firstName: true, email: true } } },
+    });
+    if (!active) throw new UnauthorizedException('Sign in required.');
+    return active.user;
+  }
+
+  @Post('logout')
+  async logout(@Headers('cookie') cookie: string | undefined, @Res({ passthrough: true }) res: CookieResponse) {
+    const token = readSession(cookie);
+    if (token) await database.session.deleteMany({ where: { digest: digest(token) } });
+    res.setHeader('Set-Cookie', sessionCookie('', 0));
+    return { status: 'signed_out' };
+  }
+}
+
+type CookieResponse = { setHeader(name: string, value: string): void };
+const sessionAge = 8 * 60 * 60;
+const secure = process.env.NODE_ENV === 'production';
+const cookieName = secure ? '__Host-gnk_session' : 'gnk_session';
+
+function sessionCookie(value: string, age: number) {
+  return cookieName + '=' + value + '; Path=/; HttpOnly; SameSite=Strict; Max-Age=' + age + (secure ? '; Secure' : '');
+}
+
+function readSession(cookie = '') {
+  const value = cookie.split(';').map(part => part.trim()).find(part => part.startsWith(cookieName + '='))?.slice(cookieName.length + 1);
+  return value && /^[a-f0-9]{64}$/.test(value) ? value : null;
 }

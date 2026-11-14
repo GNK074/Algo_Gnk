@@ -6,6 +6,9 @@ export default function AccountForm({ register = false }: { register?: boolean }
   const [message, setMessage] = useState('');
   const [busy, setBusy] = useState(false);
   const [visible, setVisible] = useState(false);
+  const [mfa, setMfa] = useState<{ challenge: string; secret: string | null }>();
+  const [recovery, setRecovery] = useState<string[]>([]);
+  const [signedIn, setSignedIn] = useState(false);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -13,24 +16,60 @@ export default function AccountForm({ register = false }: { register?: boolean }
     setBusy(true);
     setMessage('');
     try {
-      const response = await fetch(register ? '/api/auth/register' : '/api/auth/login', {
+      const response = await fetch(mfa ? '/api/auth/mfa' : register ? '/api/auth/register' : '/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...Object.fromEntries(data),
+          challenge: mfa?.challenge,
           acceptTerms: data.has('acceptTerms'),
           acknowledgePrivacy: data.has('acknowledgePrivacy'),
           consentVersion: 'draft-2026-11-13',
         }),
       });
       const result = await response.json();
-      setMessage(response.ok ? 'Check your inbox for an email verification link.' : result.message ?? 'Please try again.');
+      if (response.ok && result.status === 'mfa_required') {
+        setMfa({ challenge: result.challenge, secret: result.secret });
+      } else if (response.ok && result.status === 'signed_in') {
+        setMfa(undefined);
+        setRecovery(result.recovery);
+        setSignedIn(true);
+      } else {
+        setMessage(response.ok ? 'Check your inbox for an email verification link.' : result.message ?? 'Please try again.');
+      }
     } catch {
       setMessage('The account service is temporarily unavailable.');
     } finally {
       setBusy(false);
     }
   }
+
+  if (signedIn) return <section>
+    <h2>Signed in</h2>
+    {recovery.length > 0 && <><p>Multi-factor authentication is enabled. Save these one-time recovery codes securely.</p>
+      <ul>{recovery.map(code => <li key={code}><code>{code}</code></li>)}</ul></>}
+    <button type="button" onClick={async () => {
+      try {
+        const response = await fetch('/api/auth/logout', { method: 'POST' });
+        if (!response.ok) throw new Error();
+        setSignedIn(false);
+        setRecovery([]);
+      } catch {
+        setMessage('Sign-out failed. Please try again.');
+      }
+    }}>Sign out</button>
+    <p role="status">{message}</p>
+  </section>;
+
+  if (mfa) return <form onSubmit={submit}>
+    {mfa.secret && <p>Add this key to your authenticator as a time-based account: <code>{mfa.secret}</code></p>}
+    <label>{mfa.secret ? 'Authenticator code' : 'Authenticator or recovery code'}
+      <input name="code" autoComplete="one-time-code" maxLength={32} required />
+    </label>
+    <button disabled={busy}>Verify</button>
+    <button type="button" className="secondary" onClick={() => { setMfa(undefined); setMessage(''); }}>Back to login</button>
+    <p role="status">{message}</p>
+  </form>;
 
   return <form onSubmit={submit}>
     {register && <>
