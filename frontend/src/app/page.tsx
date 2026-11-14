@@ -12,6 +12,6 @@ export default function Home() {
         <article><h2>Authenticator security</h2><p>Protect access to your account with an authenticator app.</p></article>
       </section>
     </main>
-    <footer><nav aria-label="Legal"><Link href="/legal/terms">Terms of Service</Link><Link href="/legal/privacy">Privacy Policy</Link><Link href="/legal/risk">Risk Disclaimer</Link><Link href="/legal/security">Security Awareness</Link><Link href="/legal/cookies">Cookie Notice</Link></nav></footer><Disclaimer />
+    <footer><nav aria-label="Footer"><Link href="/contact">Contact Us</Link><Link href="/legal/terms">Terms of Service</Link><Link href="/legal/privacy">Privacy Policy</Link><Link href="/legal/risk">Risk Disclaimer</Link><Link href="/legal/security">Security Awareness</Link><Link href="/legal/cookies">Cookie Notice</Link></nav></footer><Disclaimer />
   </>;
 }

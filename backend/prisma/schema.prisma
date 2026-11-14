@@ -24,6 +24,7 @@ model User {
   loginChallenges LoginChallenge[]
   sessions        Session[]
   recoveryCodes   RecoveryCode[]
+  riskAcceptances RiskAcceptance[]
 }
 
 model TermsAcceptance {
@@ -85,4 +86,13 @@ model RecoveryCode {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+}
+
+model RiskAcceptance {
+  userId     String   @db.Uuid
+  version    String   @db.VarChar(64)
+  acceptedAt DateTime @default(now())
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([userId, version])
 }

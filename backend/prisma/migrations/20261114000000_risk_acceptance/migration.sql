@@ -1,0 +1,6 @@
+CREATE TABLE "RiskAcceptance" (
+  "userId" UUID NOT NULL REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE,
+  "version" VARCHAR(64) NOT NULL,
+  "acceptedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY ("userId", "version")
+);

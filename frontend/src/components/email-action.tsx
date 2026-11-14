@@ -37,7 +37,7 @@ export default function EmailAction({ action }: { action: Action }) {
         window.history.replaceState(null, '', window.location.pathname);
         setDone(true);
       }
-      setMessage(action === 'verify-email' ? 'Email verified. You can now log in.' :
+      setMessage(action === 'verify-email' ? 'Account Created Successfully! Your email is verified. Log in to finish setting up your GNK ALGO account.' :
         action === 'reset-password' ? 'Your password has been updated. Please log in using your new password.' :
         'If an eligible account matches, check your inbox for a link.');
     } catch {

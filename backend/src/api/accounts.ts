@@ -1,6 +1,6 @@
 import { decryptSecret, encryptSecret, generateSecret, matchingCounter } from '../security/totp';
 import nodemailer from 'nodemailer';
-import { BadRequestException, Body, ConflictException, Controller, Post, Get, Header, Headers, Res, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Body, ConflictException, Controller, Post, Get, Header, Headers, Res, UnauthorizedException } from '@nestjs/common';
 import { Prisma, PrismaClient } from '@prisma/client';
 import { createHash, randomBytes, scrypt, timingSafeEqual } from 'node:crypto';
 import { promisify } from 'node:util';
@@ -14,6 +14,29 @@ type Payload = Record<string, unknown>;
 function field(body: Payload, key: string) {
   const value = body?.[key];
   return typeof value === 'string' ? value : '';
+}
+
+const disclosure = {
+  version: '2026-11-14',
+  introduction: 'Trading in Futures & Options involves significant financial risk. You may lose some or all of your invested capital.',
+  points: [
+    'Understand the risks associated with algorithmic trading.',
+    'AI predictions and trading signals do not guarantee profits.',
+    'Past performance does not guarantee future results.',
+    'Always use appropriate risk management.',
+    'Trade responsibly and within your financial capacity.',
+  ],
+};
+
+async function sendAccountMail(to: string, subject: string, text: string) {
+  const { GNK_SMTP_USERNAME: user, GNK_SMTP_PASSWORD: password, GNK_EMAIL_FROM: from } = process.env;
+  if (!user || !password || !from) throw new Error('SMTP unavailable');
+  const transport = nodemailer.createTransport({
+    host: 'smtp.gmail.com', port: 587, secure: false, requireTLS: true,
+    auth: { user, pass: password.replace(/\s/g, '') },
+    connectionTimeout: 5000, greetingTimeout: 5000, socketTimeout: 10000,
+  });
+  await transport.sendMail({ from, to, subject, text });
 }
 
 type TokenPurpose = 'verify' | 'reset';
@@ -97,17 +120,7 @@ export class AccountController {
     if (rows !== 1) return;
     const subject = purpose === 'verify' ? 'Verify your GNK Algo email' : 'Reset your GNK Algo password';
     try {
-      const transport = nodemailer.createTransport({
-        host: 'smtp.gmail.com',
-        port: 587,
-        secure: false,
-        requireTLS: true,
-        auth: { user, pass: password.replace(/\s/g, '') },
-        connectionTimeout: 5000,
-        greetingTimeout: 5000,
-        socketTimeout: 10000,
-      });
-      await transport.sendMail({ from, to: email, subject, text: subject + ': ' + url.href });
+      await sendAccountMail(email, subject, subject + ': ' + url.href);
     } catch {
       await database.accountToken.deleteMany({ where: { digest: digest(token) } });
       console.error('GNK Algo account email delivery failed.');
@@ -136,7 +149,7 @@ export class AccountController {
     const passwordHash = purpose === 'reset'
       ? salt + ':' + ((await derive(password, salt, 64)) as Buffer).toString('hex')
       : undefined;
-    await database.$transaction(async tx => {
+    const confirmed = await database.$transaction(async tx => {
       const key = digest(token);
       const record = await tx.accountToken.findUnique({ where: { digest: key } });
       if (!record || record.purpose !== purpose) throw new BadRequestException('Invalid or expired link.');
@@ -152,8 +165,25 @@ export class AccountController {
       if (purpose === 'reset') {
         await tx.session.deleteMany({ where: { userId: record.userId } });
         await tx.loginChallenge.deleteMany({ where: { userId: record.userId } });
+        return null;
       }
+      return tx.user.findUnique({ where: { id: record.userId }, select: { id: true, firstName: true, lastName: true, email: true, createdAt: true } });
     });
+    if (confirmed) {
+      const name = confirmed.firstName + ' ' + confirmed.lastName;
+      try {
+        await sendAccountMail(confirmed.email, 'Welcome to GNK ALGO!', [
+          'Dear ' + name + ',', '', 'Your account has been successfully created.', '',
+          'Name: ' + name, 'User ID: ' + confirmed.id, 'Email: ' + confirmed.email,
+          'Registration Date (UTC): ' + confirmed.createdAt.toISOString().slice(0, 10),
+          'Account Status: Active', '',
+          'Keep your login credentials secure. GNK ALGO will never ask you to share your password or OTP.',
+          '', 'Team GNK ALGO',
+        ].join('\n'));
+      } catch {
+        console.error('GNK Algo account confirmation email failed.');
+      }
+    }
     return { status: purpose === 'verify' ? 'verified' : 'password_updated' };
   }
 
@@ -241,16 +271,44 @@ export class AccountController {
     return { status: 'signed_in', recovery: result.recovery };
   }
 
+  @Get('risk-disclosure')
+  @Header('Cache-Control', 'no-store')
+  async riskDisclosure(@Headers('cookie') cookie?: string) {
+    await this.requireSession(cookie);
+    return disclosure;
+  }
+
+  @Post('risk-disclosure')
+  @Header('Cache-Control', 'no-store')
+  async acceptRisk(@Body() body: Payload, @Headers('cookie') cookie?: string) {
+    const session = await this.requireSession(cookie);
+    if (body?.accepted !== true || body.version !== disclosure.version) {
+      throw new BadRequestException('Read and acknowledge the current disclosure.');
+    }
+    const key = { userId: session.user.id, version: disclosure.version };
+    await database.riskAcceptance.upsert({ where: { userId_version: key }, create: key, update: {} });
+    return { status: 'accepted' };
+  }
+
   @Get('session')
   @Header('Cache-Control', 'no-store')
   async session(@Headers('cookie') cookie?: string) {
+    const active = await this.requireSession(cookie);
+    const acknowledgment = await database.riskAcceptance.findUnique({
+      where: { userId_version: { userId: active.user.id, version: disclosure.version } },
+    });
+    if (!acknowledgment) throw new ForbiddenException('Risk disclosure acknowledgment required.');
+    return active.user;
+  }
+
+  private async requireSession(cookie?: string) {
     const token = readSession(cookie);
     const active = token && await database.session.findFirst({
       where: { digest: digest(token), expiresAt: { gt: new Date() }, user: { disabledAt: null } },
       select: { user: { select: { id: true, firstName: true, lastName: true, email: true, mobile: true, createdAt: true, emailVerifiedAt: true } } },
     });
     if (!active) throw new UnauthorizedException('Sign in required.');
-    return active.user;
+    return active;
   }
 
   @Post('logout')

@@ -6,6 +6,7 @@ import QRCode from 'qrcode';
 
 export default function AccountForm({ register = false }: { register?: boolean }) {
   const [message, setMessage] = useState('');
+  const [registered, setRegistered] = useState(false);
   const [busy, setBusy] = useState(false);
   const [visible, setVisible] = useState(false);
   const [mfa, setMfa] = useState<{ challenge: string; secret: string | null }>();
@@ -37,7 +38,9 @@ export default function AccountForm({ register = false }: { register?: boolean }
         }),
       });
       const result = await response.json();
-      if (response.ok && result.status === 'mfa_required') {
+      if (response.ok && register && result.status === 'verification_required') {
+        setRegistered(true);
+      } else if (response.ok && result.status === 'mfa_required') {
         setMfa({ challenge: result.challenge, secret: result.secret });
         setUseRecovery(false);
         setQr('');
@@ -60,6 +63,15 @@ export default function AccountForm({ register = false }: { register?: boolean }
       setBusy(false);
     }
   }
+
+  if (registered) return <section>
+    <h2>Your account has been successfully created!</h2>
+    <p>Email Verification Required <strong>Pending</strong></p>
+    <p>Open the secure link sent to your registered email address to activate your GNK ALGO account.</p>
+    <p>Thank you for joining GNK ALGO!</p>
+    <Link className="button" href="/resend-verification"><span aria-hidden="true">&#9993;</span> Verify Your GNK ALGO Email</Link>
+    <p>The verification page lets you request another email if needed.</p>
+  </section>;
 
   if (signedIn) return <section>
     <h2>Signed in</h2>

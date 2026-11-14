@@ -21,6 +21,7 @@ export default function AccountView({ profile = false }: { profile?: boolean }) 
     async function load() {
       try {
         const response = await fetch('/api/auth/session', { cache: 'no-store', signal: controller.signal });
+        if (response.status === 403) { window.location.replace('/risk-disclosure'); return; }
         if (response.status === 401) { setMessage('Your session has ended. Please log in.'); return; }
         if (!response.ok) throw new Error();
         setAccount(await response.json());
