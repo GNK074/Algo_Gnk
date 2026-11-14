@@ -80,3 +80,19 @@ header, footer { background-color: var(--surface, #141d34); border-color: var(--
 .theme-shortcut { display: grid; place-items: center; flex: 0 0 44px; width: 44px; height: 44px; padding: 0; background: var(--surface, #141d34); color: inherit; border: 1px solid var(--border, #75809d); }
 .theme-shortcut[aria-label="Switch to light mode"] { color: #ffd366; }
 .theme-shortcut svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+
+.account-workspace { display: grid; grid-template-columns: minmax(0, 1fr); gap: 1.25rem; max-width: 74rem; margin: 2rem auto; padding-inline: 1rem; }
+.account-workspace:has(.account-sidebar) { grid-template-columns: minmax(10rem, 13rem) minmax(0, 1fr); }
+.account-sidebar, .account-content { border: 1px solid var(--border, #323b55); border-radius: 1rem; padding: clamp(1rem, 3vw, 2rem); background: var(--surface, #141d34); }
+.account-sidebar nav { display: grid; gap: .35rem; }
+.account-sidebar a { padding: .55rem .7rem; border-radius: .5rem; }
+.account-sidebar [aria-current=page] { background: var(--base, #0a1022); font-weight: 700; }
+.account-content h1 { margin-top: 0; }
+.account-details { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr)); gap: 1rem; }
+.account-details > div { border: 1px solid var(--border, #323b55); border-radius: .75rem; padding: 1rem; overflow-wrap: anywhere; }
+.account-details dt { font-weight: 650; }
+.account-details dd { margin: .4rem 0 0; }
+@media (max-width: 700px) {
+  .account-workspace:has(.account-sidebar) { grid-template-columns: minmax(0, 1fr); }
+  .account-sidebar nav { display: flex; justify-content: flex-start; }
+}

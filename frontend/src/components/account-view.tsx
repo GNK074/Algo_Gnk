@@ -48,20 +48,32 @@ export default function AccountView({ profile = false }: { profile?: boolean }) 
 
   if (needsDisclosure) return <RiskDisclosure />;
 
-  return <main className="panel">
-    <Link href="/">GNK Algo</Link>
-    <h1>{profile ? 'Profile' : 'Dashboard'}</h1>
-    {account ? <>
-      <nav aria-label="Account"><Link href="/dashboard">Dashboard</Link><Link href="/profile">Profile</Link><Link href="/sessions">Sessions</Link><Link href="/agreements">Agreements</Link><button onClick={logout}>Sign out</button></nav>
-      <h2>{profile ? account.firstName + ' ' + account.lastName : 'Welcome, ' + account.firstName}</h2>
-      <dl>
-        <dt>Email</dt><dd>{account.email}</dd>
-        <dt>Email status</dt><dd>{account.emailVerifiedAt ? 'Verified' : 'Pending verification'}</dd>
-        {profile && <><dt>User ID</dt><dd>{account.id}</dd><dt>Mobile</dt><dd>{account.mobile}</dd>
-          <dt>Member since</dt><dd>{new Date(account.createdAt).toLocaleDateString()}</dd></>}
-      </dl>
-      <Link href="/legal/security">Security awareness</Link>
-    </> : <Link href="/login">Log in</Link>}
-    <p role="status">{message}</p>
+  return <main className="account-workspace">
+    {account && <aside className="account-sidebar">
+      <nav aria-label="Account">
+        <Link href="/dashboard" aria-current={!profile ? 'page' : undefined}>Dashboard</Link>
+        <Link href="/profile" aria-current={profile ? 'page' : undefined}>Profile</Link>
+        <Link href="/sessions">Sessions</Link>
+        <Link href="/agreements">Agreements</Link>
+        <Link href="/legal/security">Security awareness</Link>
+        <button type="button" className="secondary" onClick={logout}>Sign out</button>
+      </nav>
+    </aside>}
+    <section className="account-content">
+      <h1>{profile ? 'Profile' : 'Dashboard'}</h1>
+      {account ? <>
+        <h2>{profile ? account.firstName + ' ' + account.lastName : 'Welcome, ' + account.firstName}</h2>
+        <dl className="account-details">
+          <div><dt>Email</dt><dd>{account.email}</dd></div>
+          <div><dt>Email status</dt><dd>{account.emailVerifiedAt ? 'Verified' : 'Pending verification'}</dd></div>
+          {profile && <>
+            <div><dt>User ID</dt><dd>{account.id}</dd></div>
+            <div><dt>Mobile</dt><dd>{account.mobile}</dd></div>
+            <div><dt>Member since</dt><dd>{new Date(account.createdAt).toLocaleDateString()}</dd></div>
+          </>}
+        </dl>
+      </> : <Link href="/login">Log in</Link>}
+      <p role="status">{message}</p>
+    </section>
   </main>;
 }
